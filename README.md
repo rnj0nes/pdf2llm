@@ -1,9 +1,15 @@
-# pdf2llm
+# pdf2llm & png2md
+
+pdf2llm.sh processes pdfs to md, txt, json
+
+png2md processes pngs to md
+
+## pdf2llm
 Process PDF output for LLM AI Agent (VS-CODE)
 
 Developed for academic workflows requiring strict LLM grounding and page-level citation integrity.
 
-# pdf2llm.sh
+### pdf2llm.sh
 
 CLI tool for extracting PDF text for LLM grounding and page-level citation.
 
@@ -11,7 +17,7 @@ CLI tool for extracting PDF text for LLM grounding and page-level citation.
 
 ---
 
-## Requirements
+### Requirements
 
 * `pdfinfo`, `pdftotext`, `pdffonts` (Poppler)
 * `python3`
@@ -25,7 +31,7 @@ brew install poppler ocrmypdf pandoc
 
 ---
 
-## Usage
+### Usage
 
 ```bash
 chmod +x pdf2llm.sh
@@ -40,7 +46,7 @@ llm_out/
 
 ---
 
-## Outputs
+### Outputs
 
 For `MyDocument.pdf`:
 
@@ -66,7 +72,7 @@ Records OCR decision and extraction metadata.
 
 ---
 
-## OCR Logic
+### OCR Logic
 
 The script:
 
@@ -83,13 +89,13 @@ Override with:
 
 ---
 
-# png2md.sh
+## png2md.sh
 
 CLI tool for OCR-ing a directory of PNG images and combining them into a single cleaned Markdown file.
 
 `png2md.sh` sorts images alphanumerically, extracts text via Tesseract, and joins lines to restore paragraph flow while preserving double-line breaks.
 
-## Usage
+### Usage
 
 ```bash
 chmod +x png2md.sh
@@ -101,14 +107,14 @@ chmod +x png2md.sh
 - **Traceability**: Injects the source filename as an HTML comment (`<!-- filename.png -->`) above its respective text.
 - **Output**: Generates `png2md_output.md` in the current directory.
 
-## Requirements
+### Requirements
 
 * `tesseract`
 * `python3`
 
 ---
 
-## Typical LLM Workflow
+### Typical LLM Workflow
 
 1. Treat `llm_out/` as your document corpus.
 2. Use `.jsonl` for page-cited answers.
