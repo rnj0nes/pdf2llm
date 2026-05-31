@@ -83,6 +83,31 @@ Override with:
 
 ---
 
+# png2md.sh
+
+CLI tool for OCR-ing a directory of PNG images and combining them into a single cleaned Markdown file.
+
+`png2md.sh` sorts images alphanumerically, extracts text via Tesseract, and joins lines to restore paragraph flow while preserving double-line breaks.
+
+## Usage
+
+```bash
+chmod +x png2md.sh
+./png2md.sh /path/to/my_screenshots/
+```
+
+- **Alphanumerical Sorting**: Uses natural sort order for filenames.
+- **Paragraph Reflow**: Automatically removes single line breaks within paragraphs (common in OCR) while respecting double-line breaks.
+- **Traceability**: Injects the source filename as an HTML comment (`<!-- filename.png -->`) above its respective text.
+- **Output**: Generates `png2md_output.md` in the current directory.
+
+## Requirements
+
+* `tesseract`
+* `python3`
+
+---
+
 ## Typical LLM Workflow
 
 1. Treat `llm_out/` as your document corpus.
