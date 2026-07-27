@@ -38,6 +38,15 @@ chmod +x pdf2llm.sh
 ./pdf2llm.sh MyDocument.pdf
 ```
 
+### Global Installation
+
+To use `pdf2llm` from any directory, it is recommended to create a symbolic link in your `~/bin` or `/usr/local/bin` folder. This ensures you are always running the latest "master" version from this repository:
+
+```bash
+# Create a symlink (example for ~/bin)
+ln -s "$PWD/pdf2llm.sh" ~/bin/pdf2llm
+```
+
 Outputs are written to:
 
 ```
