@@ -1,0 +1,5 @@
+.DS_Store
+llm_out/
+.work_*
+test_page*
+*.pdf
