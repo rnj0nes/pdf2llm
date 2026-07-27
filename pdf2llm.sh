@@ -27,6 +27,7 @@ Options:
   --thin-frac F            Fraction of thin pages to trigger OCR (default: 0.35)
   --sample-pages N         Max pages to sample for OCR decision (default: 20)
   --force-ocr              Always run OCR
+  --force-fallback         Always use tesseract fallback (skip ocrmypdf)
   --no-ocr                 Never run OCR (extract directly)
   --keep-intermediate       Keep intermediate files (like sampled page text)
   -h, --help               Show help
@@ -53,6 +54,7 @@ MIN_TEXT_CHARS_PER_PAGE="$MIN_TEXT_CHARS_PER_PAGE_DEFAULT"
 THIN_PAGE_FRACTION_THRESHOLD="$THIN_PAGE_FRACTION_THRESHOLD_DEFAULT"
 MAX_PAGES_TO_SAMPLE="$MAX_PAGES_TO_SAMPLE_DEFAULT"
 FORCE_OCR=0
+FORCE_FALLBACK=0
 NO_OCR=0
 KEEP_INTERMEDIATE=0
 
@@ -67,6 +69,7 @@ while [[ $# -gt 0 ]]; do
     --thin-frac) THIN_PAGE_FRACTION_THRESHOLD="$2"; shift 2;;
     --sample-pages) MAX_PAGES_TO_SAMPLE="$2"; shift 2;;
     --force-ocr) FORCE_OCR=1; shift;;
+    --force-fallback) FORCE_FALLBACK=1; shift;;
     --no-ocr) NO_OCR=1; shift;;
     --keep-intermediate) KEEP_INTERMEDIATE=1; shift;;
     -h|--help) usage; exit 0;;
@@ -185,6 +188,9 @@ fi
 if [[ "$FORCE_OCR" -eq 1 ]]; then
   DECISION="ocr"
   REASON="forced"
+elif [[ "$FORCE_FALLBACK" -eq 1 ]]; then
+  DECISION="ocr_fallback"
+  REASON="forced_fallback"
 elif [[ "$NO_OCR" -eq 1 ]]; then
   DECISION="direct"
   REASON="ocr_disabled"
@@ -225,17 +231,33 @@ if [[ "$DECISION" == "ocr" ]]; then
     exit 1
   fi
 
+  # Skip ocrmypdf if we are already in fallback mode (though DECISION should be ocr_fallback in that case)
   # OCR for mixed grant PDFs: keep text if present, OCR missing pages, deskew/clean.
   # --skip-text avoids re-OCRing pages that already have text.
-  ocrmypdf \
+  echo "Attempting ocrmypdf..."
+  if ocrmypdf \
     --skip-text \
     --deskew \
     --clean \
     --optimize 3 \
     -l "$OCR_LANG" \
-    "$INPDF" "$OCR_PDF"
+    "$INPDF" "$OCR_PDF"; then
+    SOURCE_PDF="$OCR_PDF"
+  elif command -v pdftoppm >/dev/null 2>&1; then
+    echo "WARNING: ocrmypdf failed. Attempting fallback: pdftoppm + tesseract..."
+    REASON="${REASON} (fallback: pdftoppm+tesseract)"
+    DECISION="ocr_fallback"
+  else
+    echo "ERROR: OCR requested but ocrmypdf failed and no fallback available." >&2
+    exit 1
+  fi
+fi
 
-  SOURCE_PDF="$OCR_PDF"
+if [[ "$DECISION" == "ocr_fallback" ]]; then
+  FALLBACK_DIR="$WORKDIR/fallback_pngs"
+  mkdir -p "$FALLBACK_DIR"
+  echo "Preparing pages as images for fallback OCR..."
+  pdftoppm -png -r 300 "$INPDF" "$FALLBACK_DIR/page"
 fi
 
 # ---------- Output 1: TXT with explicit page markers ----------
@@ -245,10 +267,21 @@ TMP_TXT="$WORKDIR/pages_concat.txt"
 
 for ((p=1; p<=PAGES; p++)); do
   echo "===== PAGE ${p} =====" >> "$TMP_TXT"
-  pdftotext -layout -nopgbrk -f "$p" -l "$p" "$SOURCE_PDF" - \
-    2>/dev/null \
-    | sed 's/\r$//' \
-    >> "$TMP_TXT" || true
+  if [[ "$DECISION" == "ocr_fallback" ]]; then
+    PNG_FILE=$(find "$FALLBACK_DIR" -name "page-${p}.png" -o -name "page-0${p}.png" -o -name "page-00${p}.png" | head -n 1)
+    if [[ -f "$PNG_FILE" ]]; then
+      tesseract "$PNG_FILE" stdout -l "$OCR_LANG" 2>/dev/null \
+        | python3 -c 'import sys, re; t = sys.stdin.read(); t = re.sub(r"(?<!\n)\n(?!\n)", " ", t); print(t.strip())' \
+        >> "$TMP_TXT"
+    else
+      echo "[ERROR: PNG missing for page $p]" >> "$TMP_TXT"
+    fi
+  else
+    pdftotext -layout -nopgbrk -f "$p" -l "$p" "$SOURCE_PDF" - \
+      2>/dev/null \
+      | sed 's/\r$//' \
+      >> "$TMP_TXT" || true
+  fi
   echo "" >> "$TMP_TXT"
 done
 

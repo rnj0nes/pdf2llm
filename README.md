@@ -78,13 +78,15 @@ The script:
 
 * Checks for embedded fonts.
 * Samples pages to detect “thin” text layers.
-* Runs OCR only when needed.
+* Runs OCR (`ocrmypdf`) only when needed.
+* **Automatic Fallback**: If `ocrmypdf` fails (e.g., dependency issues), it automatically falls back to a robust `pdftoppm` + `tesseract` pipeline.
 
 Override with:
 
 ```bash
---force-ocr
---no-ocr
+--force-ocr       # Always run ocrmypdf
+--force-fallback  # Use tesseract fallback immediately
+--no-ocr          # Never run OCR (extract text layer only)
 ```
 
 ---
